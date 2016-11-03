@@ -19,6 +19,7 @@ namespace MotionDetector
     {
         public VideoCaptureViewModel()
         {
+            RecognizeMotionCommand = new Command<object>(() => { RecognizeImage(); }, () => { return true; });
         }
 
 
