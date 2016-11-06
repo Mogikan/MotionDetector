@@ -28,8 +28,7 @@ namespace MotionDetector
         public CameraRecognizerWindow()
         {
             InitializeComponent();
-            this.Loaded += MainWindow_Loaded;
-            DataContext = videoCaptureViewModel = new VideoCaptureViewModel();
+            this.Loaded += MainWindow_Loaded;            
         }
 
         private int minFocusValue;
@@ -42,15 +41,23 @@ namespace MotionDetector
         private int additionalMarginValue = 50;
         private int minimumBoundHeight = 400;
         private int bottomFocusThreshold = 13;
-
+        private const int DesiredCameraHeight = 480;
+        private const int DesiredCameraWidth = 640;
+        private const int BytesPerPixel = 4;
         private IAMCameraControl cameraControl;
         private VideoCaptureViewModel videoCaptureViewModel;
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            videoCaptureElement.DesiredPixelHeight = DesiredCameraHeight;
+            videoCaptureElement.DesiredPixelWidth = DesiredCameraWidth;
+            DataContext = videoCaptureViewModel = new VideoCaptureViewModel(DesiredCameraWidth,DesiredCameraHeight,BytesPerPixel);
             //videoCaptureViewModel.Initialize();
+
+            videoCaptureViewModel.PropertyChanged += VideoCaptureViewModel_PropertyChanged;
             var camera = WPFMediaKit.DirectShow.Controls.MultimediaUtil.VideoInputDevices.First();
-            videoCaptureElement.DesiredPixelHeight = 1080;
-            videoCaptureElement.DesiredPixelWidth = 1920;
+            
+            //videoCaptureElement.DesiredPixelHeight = 1080;
+            //videoCaptureElement.DesiredPixelWidth = 1920;
             videoCaptureElement.VideoCaptureSource = camera.Name;
             videoCaptureElement.NewVideoSample += VideoCaptureElement_NewVideoSample;
             videoCaptureElement.EnableSampleGrabbing = true;
@@ -71,36 +78,86 @@ namespace MotionDetector
         }
 
         private DateTime lastCapturedImageTime = DateTime.Now;
+
+        public static Bitmap MakeGrayscale(Bitmap original)
+        {
+            //create a blank bitmap the same size as original
+            Bitmap newBitmap = new Bitmap(original.Width, original.Height);            
+            //get a graphics object from the new image
+            Graphics g = Graphics.FromImage(newBitmap);
+
+            //create the grayscale ColorMatrix
+            ColorMatrix colorMatrix = new ColorMatrix(
+               new float[][]
+               {
+         new float[] {.3f, .3f, .3f, 0, 0},
+         new float[] {.59f, .59f, .59f, 0, 0},
+         new float[] {.11f, .11f, .11f, 0, 0},
+         new float[] {0, 0, 0, 1, 0},
+         new float[] {0, 0, 0, 0, 1}
+               });
+
+            //create some image attributes
+            ImageAttributes attributes = new ImageAttributes();
+
+            //set the color matrix attribute
+            attributes.SetColorMatrix(colorMatrix);
+
+            //draw the original image on the new image
+            //using the grayscale color matrix
+            g.DrawImage(original, new System.Drawing.Rectangle(0, 0, original.Width, original.Height),
+               0, 0, original.Width, original.Height, GraphicsUnit.Pixel, attributes);
+
+            //dispose the Graphics object
+            g.Dispose();
+            return newBitmap;
+        }
         private void VideoCaptureElement_NewVideoSample(object sender, WPFMediaKit.DirectShow.MediaPlayers.VideoSampleArgs e)
         {
             var currentTime = DateTime.Now;
-            if ((currentTime - lastCapturedImageTime).TotalSeconds >= 2)
-                //&& videoCaptureViewModel.EnableRecognizing
+            if ((currentTime - lastCapturedImageTime).TotalSeconds >= 1
+                && videoCaptureViewModel.EnableRecognizing)
                 //&& videoCaptureViewModel.TaskCount < 3)
             {
                 var imageToRecognize = e.VideoFrame;
+                imageToRecognize = MakeGrayscale(imageToRecognize);
                 imageToRecognize.RotateFlip(RotateFlipType.RotateNoneFlipY);
 
                 Bitmap croppedBitmap = imageToRecognize;
-                Dispatcher.Invoke(() =>
-                {
-                    Debug.WriteLine("Focus Value " + (int)focusSlider.Value);
-                    var documentBoundLeft = (int) Canvas.GetLeft(documentBound);
-                    var documentBoundTop = (int) Canvas.GetTop(documentBound);
-                    var newDocumentBoundLeft = Math.Max(0, documentBoundLeft - additionalMarginValue);
-                    var newDocumentBoundTop = Math.Max(0, documentBoundTop - additionalMarginValue);
-                    croppedBitmap = imageToRecognize.Clone(new System.Drawing.Rectangle(
-                                                            newDocumentBoundLeft,
-                                                            newDocumentBoundTop,
-                                                            Math.Min((int)documentCanvas.Width - newDocumentBoundLeft, (int)documentBound.Width +  2 * additionalMarginValue),
-                                                            Math.Min((int)documentCanvas.Height - newDocumentBoundTop, (int)documentBound.Height + 2 * additionalMarginValue)),
-                                                        imageToRecognize.PixelFormat);
-                });
+                
                 
                 videoCaptureViewModel.Source = croppedBitmap;
                 videoCaptureViewModel.RecognizeMotionCommand.Execute(null);
                 lastCapturedImageTime = DateTime.Now;
             }
+        }
+
+        private void VideoCaptureViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            //if (e.PropertyName == "MovementMap")
+            //{
+            //    Dispatcher.Invoke(() =>
+            //    {
+            //        videoOverlay.Children.Clear();
+            //        for (int i = 0; i < videoCaptureViewModel.MovementMap.Length; i++)
+            //        {
+            //            for (int j = 0; j < videoCaptureViewModel.MovementMap[i].Length; j++)
+            //            {
+            //                if (videoCaptureViewModel.MovementMap[i][j])
+            //                {
+            //                    Line movementLine = new Line();
+            //                    movementLine.Stroke = new SolidColorBrush(System.Windows.Media.Colors.Lime);
+            //                    movementLine.X1 = j;
+            //                    movementLine.Y1 = i;
+            //                    movementLine.X2 = j;
+            //                    movementLine.Y2 = i;
+            //                    videoOverlay.Children.Add(movementLine);
+            //                }
+            //            }
+            //        }
+                    
+            //    });
+            //}
         }
 
         private void CaptureButtonClick(object sender, RoutedEventArgs e)
@@ -113,11 +170,11 @@ namespace MotionDetector
             cameraControl.Set(CameraControlProperty.Focus, (int)focusSlider.Value, CameraControlFlags.Manual);
             Dispatcher.Invoke(() =>
             {
-                var normalizedFocusValue = focusSlider.Value - bottomFocusThreshold;
-                documentBound.Height = Math.Min(documentCanvas.Height, Math.Max(minimumBoundHeight, normalizedFocusValue * 100));
-                documentBound.Width = Math.Min(documentCanvas.Width, documentBound.Height * 1.4);
-                Canvas.SetLeft(documentBound, (documentCanvas.Width - documentBound.Width) / 2);
-                Canvas.SetTop(documentBound, Math.Max(0, documentCanvas.Height - documentBound.Height - additionalMarginValue));
+                //var normalizedFocusValue = focusSlider.Value - bottomFocusThreshold;
+                //documentBound.Height = Math.Min(documentCanvas.Height, Math.Max(minimumBoundHeight, normalizedFocusValue * 100));
+                //documentBound.Width = Math.Min(documentCanvas.Width, documentBound.Height * 1.4);
+                //Canvas.SetLeft(documentBound, (documentCanvas.Width - documentBound.Width) / 2);
+                //Canvas.SetTop(documentBound, Math.Max(0, documentCanvas.Height - documentBound.Height - additionalMarginValue));
             });
         }
     }

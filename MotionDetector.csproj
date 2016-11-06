@@ -57,6 +57,7 @@
     <Compile Include="Observable.cs" />
     <Compile Include="RecognitionValue.cs" />
     <Compile Include="RecognitionValueCollection.cs" />
+    <Compile Include="SigmaDeltaBackgroundSubtractionAlgorithm.cs" />
     <Compile Include="VideoCaptureViewModel.cs" />
     <Page Include="CameraRecognizerWindow.xaml">
       <Generator>MSBuild:Compile</Generator>

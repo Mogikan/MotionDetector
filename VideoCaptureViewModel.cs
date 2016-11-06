@@ -1,28 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;       
+using System.Windows.Media.Imaging;
 
 namespace MotionDetector
 {
     internal class VideoCaptureViewModel: Observable
     {
-        public VideoCaptureViewModel()
+        public VideoCaptureViewModel(int width, int height,int bytesPerPixel)
         {
             RecognizeMotionCommand = new Command<object>(() => { RecognizeImage(); }, () => { return true; });
+            _sigmaDeltaBackgroundSubtractionAllgorithm = new SigmaDeltaBackgroundSubtractionAlgorithm(width, height,bytesPerPixel);
         }
 
-
+        SigmaDeltaBackgroundSubtractionAlgorithm _sigmaDeltaBackgroundSubtractionAllgorithm;
         public ICommand RecognizeMotionCommand { get; private set; }
 
         public Bitmap Source
@@ -37,6 +33,36 @@ namespace MotionDetector
                 NotifyPropertyChanged(()=>Source);
             }
         }
+
+        public BitmapSource ConvertBitmapToSource(System.Drawing.Bitmap bitmap)
+        {
+            var bitmapData = bitmap.LockBits(
+                new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height),
+                System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
+
+            var bitmapSource = BitmapSource.Create(
+                bitmapData.Width, bitmapData.Height, 96, 96, PixelFormats.Gray8, null,
+                bitmapData.Scan0, bitmapData.Stride * bitmapData.Height, bitmapData.Stride);
+
+            bitmap.UnlockBits(bitmapData);
+            return bitmapSource;
+        }
+
+        public BitmapSource MotionPicture
+        {
+            get
+            {
+                return ConvertBitmapToSource(_sigmaDeltaBackgroundSubtractionAllgorithm.MotionPicture);
+            }
+        }
+
+        //public bool[][] MovementMap
+        //{
+        //    get
+        //    {
+        //        return _sigmaDeltaBackgroundSubtractionAllgorithm.MovementMap;
+        //    }
+        //}
 
         public int TaskCount { get; set; }
 
@@ -77,105 +103,39 @@ namespace MotionDetector
         }
 
         private void RecognizeImageAsync()
+        {         
+            byte[][] imageBytes = GetImageBytes(Source);
+            _sigmaDeltaBackgroundSubtractionAllgorithm.ExecuteStep(imageBytes);
+            NotifyPropertyChanged(()=> MotionPicture);
+        }
+        private static object locker = new object();
+        private byte[][] GetImageBytes(Bitmap bitmap)
         {
-            //IPicture picture;
-            //Bitmap sharpnessCheckChunkBitmap;
+            int imageWidth = bitmap.Width;
+            int imageHeight = bitmap.Height;
+            BitmapData bmpdata = null;
+            lock (locker) {
+                try
+                {
+                    bmpdata = bitmap.LockBits(new Rectangle(0, 0, imageWidth, imageHeight), ImageLockMode.ReadOnly, bitmap.PixelFormat);
+                    var totalImageBytes = bmpdata.Stride * bitmap.Height;
+                    byte[][] buffer = new byte[imageHeight][];
 
-            //lock (Source)
-            //{
-            //    picture = pvService.PictureService.LoadFromBitmap(Source,
-            //        Library.Core.Pictures.Implementation.PictureSourceInfo.CreateFromMemory());
-            //    //ToDo try to find better rectangle than the whole image. (200, Source.Height / 2, 200, 200) - is a nice choice
-            //    sharpnessCheckChunkBitmap = Source.Clone(new Rectangle(0, 0, Source.Width, Source.Height),
-            //        Source.PixelFormat);
-            //}
-
-            //var inputFocusTestImage = AutoImage.FromBitmap(new DefaultImageManager(), sharpnessCheckChunkBitmap,
-            //    "SharpnessCheck");
-            //var outputFocusTestImage = new AutoImage<Bgr, byte>(new DefaultImageManager(), inputFocusTestImage.Size);
-            //CvInvoke.Laplacian(inputFocusTestImage.Image, outputFocusTestImage.Image, DepthType.Cv32F);
-            //double[] minV, maxV;
-            //Point[] minL, maxL;
-            //outputFocusTestImage.Image.MinMax(out minV, out maxV, out minL, out maxL);
-            //Debug.WriteLine("Laplasian value " + maxV[0]);
-
-            //if (maxV[0] < LaplassianThreshold || !enableRecognizing)
-            //{
-            //    return;
-            //}
-
-            //var settings =
-            //    pvService.SettingService.CreateSettingSet(
-            //        PassportVision.Documents.RussianPassport.Info.DocumentTypeInfoProvider.Instance);
-
-            //var settingSetBuilder = pvService.SettingService.CreateSettingSetBuilder();
-            ////TODO uncomment to dump images
-            ////pvService.DebugService.Settings.DebugMode.SetValue(settingSetBuilder, pvService.DebugService.DebugModes.Full);
-            //pvService.EnvironmentService.GuiSettings.ShowProgressBar.SetValue(settingSetBuilder, false);
-            //var debugSettings = settingSetBuilder.Build();
-            //var finalSettingSet = (settings == null) ? debugSettings : SettingHelper.Combine(settings, debugSettings);
-
-            //var logger = pvService.DebugService.CreateLogger("VideoRecognizer", finalSettingSet);
-
-            //logger.Info("Laplace value {0}", maxV[0]);
-
-            //var result = pvService.RecognitionService.Recognize(picture, finalSettingSet);
-
-            //lock (fieldsAggregator)
-            //{
-            //    if (result.FieldImages.Count > 2 && enableRecognizing)
-            //    {
-            //        System.Diagnostics.Debug.WriteLine("good");
-
-            //        foreach (var fieldImage in result.Fields)
-            //        {
-            //            if (fieldImage.Info.IsRequired)
-            //                fieldsAggregator.AggregateFieldConfidence(fieldImage.Info.Id,
-            //                    fieldImage.RecognizedText.PlainText,
-            //                    fieldImage.RecognizedText.AverageConfidence);
-            //        }
-
-            //        fieldsAggregator.Fields[0].SelectBestFieldResult();
-
-            //        Dispatcher.Invoke(() =>
-            //        {
-            //            RecognizedFields.Clear();
-            //            foreach (var field in fieldsAggregator.Fields)
-            //            {
-            //                var recognitionValue = field.SelectBestFieldResult();
-            //                var isFieldReliable = recognitionValue.Confidence >= FieldConfidenceTreshold;
-            //                RecognizedFields.Add(new FieldDescriptor()
-            //                {
-            //                    Id = field.FieldName,
-            //                    Value = recognitionValue.Value,
-            //                    IsReliable = isFieldReliable
-            //                });
-            //            }
-            //        });
-
-            //        foreach (var field in RecognizedFields)
-            //        {
-            //            System.Diagnostics.Debug.WriteLine(field.Value);
-            //        }
-
-            //        var averageConfidence = result.DocumentInfo.PageInfo.FieldsCount != 0
-            //            ? fieldsAggregator.Fields.Sum(f => f.SelectBestFieldResult().Confidence)/
-            //              result.DocumentInfo.PageInfo.FieldsCount
-            //            : 0;
-            //        Debug.WriteLine("average confidence = {0}", averageConfidence);
-            //        if (averageConfidence > AverageConfidenceThreshold)
-            //        {
-            //            EnableRecognizing = false;
-            //            foreach (var field in fieldsAggregator.Fields)
-            //            {
-            //                var recognitionValue = field.SelectBestFieldResult();
-            //                var fieldName = field.FieldName;
-            //                answerFields[fieldName] = recognitionValue;
-            //            }
-            //            fieldsAggregator = new DocumentsFieldsAggregator();
-            //        }
-            //    }
-            //}
+                    var ptr = bmpdata.Scan0;
+                    for (int j = 0; j < imageHeight; j++)
+                    {
+                        buffer[j] = new byte[bmpdata.Stride];
+                        Marshal.Copy(ptr, buffer[j], 0, bmpdata.Stride);
+                        ptr = ptr + bmpdata.Stride;
+                    }
+                    return buffer;
+                }
+                finally
+                {
+                    if (bmpdata != null)
+                        bitmap.UnlockBits(bmpdata);
+                }
+            }
         }
 
         private Task StartRecognitionAsync()

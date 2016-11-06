@@ -17,10 +17,15 @@
             <ColumnDefinition Width="200"/>
         </Grid.ColumnDefinitions>
         <Viewbox>
-            <Canvas x:Name="documentCanvas" Width="1920" Height="1080">
-                <mediakit:VideoCaptureElement x:Name="videoCaptureElement" Canvas.Left="0" Canvas.Right="0"/>
-                <Rectangle x:Name="documentBound" Canvas.Top="175" Canvas.Left="395" Width="1250" Height="900" Stroke="#FF28FF00" StrokeThickness="5"  />
-            </Canvas>
+            
+                <Canvas x:Name="videoOverlay" Width="640" Height="480">
+                    <!--Width="1920" Height="1080">-->
+                    <mediakit:VideoCaptureElement Visibility="Collapsed" x:Name="videoCaptureElement" Canvas.Left="0" Canvas.Right="0"/>
+
+                    <Image Source="{Binding MotionPicture}" Width="640" Height="480"/>
+                    <!--<Rectangle x:Name="documentBound" Canvas.Top="175" Canvas.Left="395" Width="1250" Height="900" Stroke="#FF28FF00" StrokeThickness="5"  />-->
+                </Canvas>
+            
         </Viewbox>
         <!--<Image Source="{Binding Source,Converter={StaticResource bitmapConverter}}"/>-->
         <Grid Grid.Column="1">
