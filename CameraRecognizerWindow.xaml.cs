@@ -43,7 +43,7 @@ namespace MotionDetector
         private int bottomFocusThreshold = 13;
         private const int DesiredCameraHeight = 480;
         private const int DesiredCameraWidth = 640;
-        private const int BytesPerPixel = 4;
+        private const int BytesPerPixel = 3;
         private IAMCameraControl cameraControl;
         private VideoCaptureViewModel videoCaptureViewModel;
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -115,12 +115,12 @@ namespace MotionDetector
         private void VideoCaptureElement_NewVideoSample(object sender, WPFMediaKit.DirectShow.MediaPlayers.VideoSampleArgs e)
         {
             var currentTime = DateTime.Now;
-            if ((currentTime - lastCapturedImageTime).TotalSeconds >= 1
+            if ((currentTime - lastCapturedImageTime).TotalMilliseconds >= 100
                 && videoCaptureViewModel.EnableRecognizing)
                 //&& videoCaptureViewModel.TaskCount < 3)
             {
                 var imageToRecognize = e.VideoFrame;
-                imageToRecognize = MakeGrayscale(imageToRecognize);
+                //imageToRecognize = MakeGrayscale(imageToRecognize);
                 imageToRecognize.RotateFlip(RotateFlipType.RotateNoneFlipY);
 
                 Bitmap croppedBitmap = imageToRecognize;
