@@ -55,25 +55,8 @@ namespace MotionDetector
                 return ConvertBitmapToSource(_sigmaDeltaBackgroundSubtractionAllgorithm.MotionPicture);
             }
         }
-
-        //public bool[][] MovementMap
-        //{
-        //    get
-        //    {
-        //        return _sigmaDeltaBackgroundSubtractionAllgorithm.MovementMap;
-        //    }
-        //}
-
+        
         public int TaskCount { get; set; }
-
-        private DocumentsFieldsAggregator fieldsAggregator = new DocumentsFieldsAggregator();
-
-        private Dictionary<string, RecognitionValue> answerFields = new Dictionary<string, RecognitionValue>();
-        public ObservableCollection<FieldDescriptor> RecognizedFields
-        {
-            get;
-            private set;
-        }
 
         private bool enableRecognizing;
         public bool EnableRecognizing

@@ -49,16 +49,11 @@
     <Compile Include="BitmapValueConverter.cs" />
     <Compile Include="Command.cs" />
     <Compile Include="CommandBase.cs" />
-    <Compile Include="DocumentsFieldsAggregator.cs" />
-    <Compile Include="DocumentsFieldsCollection.cs" />
-    <Compile Include="FieldConfidenceAggregator.cs" />
-    <Compile Include="FieldDescriptor.cs" />
     <Compile Include="IUpdatableCommand.cs" />
     <Compile Include="Observable.cs" />
-    <Compile Include="RecognitionValue.cs" />
-    <Compile Include="RecognitionValueCollection.cs" />
     <Compile Include="SigmaDeltaBackgroundSubtractionAlgorithm.cs" />
     <Compile Include="VideoCaptureViewModel.cs" />
+    <Compile Include="VideoUtils.cs" />
     <Page Include="CameraRecognizerWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
