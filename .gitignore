@@ -23,7 +23,9 @@ Thumbs.db
 [Dd]ebug*/
 *.lib
 *.sbr
+*/packages*
 obj/
 [Rr]elease*/
 _ReSharper*/
 [Tt]est[Rr]esult*
+MotionDetector/MotionDetector.VC.VC.opendb

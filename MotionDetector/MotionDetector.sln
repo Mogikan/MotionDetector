@@ -1,0 +1,38 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MotionDetector", "MotionDetector.csproj", "{6B2F8479-3D28-4263-BB5B-3C202EC0F349}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CudaKernel", "..\CudaKernel\CudaKernel.vcxproj", "{3D700320-1923-42FB-A2BA-B133E6F917CF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6B2F8479-3D28-4263-BB5B-3C202EC0F349}.Debug|x64.ActiveCfg = Debug|x64
+		{6B2F8479-3D28-4263-BB5B-3C202EC0F349}.Debug|x64.Build.0 = Debug|x64
+		{6B2F8479-3D28-4263-BB5B-3C202EC0F349}.Debug|x86.ActiveCfg = Debug|x86
+		{6B2F8479-3D28-4263-BB5B-3C202EC0F349}.Debug|x86.Build.0 = Debug|x86
+		{6B2F8479-3D28-4263-BB5B-3C202EC0F349}.Release|x64.ActiveCfg = Debug|x86
+		{6B2F8479-3D28-4263-BB5B-3C202EC0F349}.Release|x64.Build.0 = Debug|x86
+		{6B2F8479-3D28-4263-BB5B-3C202EC0F349}.Release|x86.ActiveCfg = Debug|x86
+		{6B2F8479-3D28-4263-BB5B-3C202EC0F349}.Release|x86.Build.0 = Debug|x86
+		{3D700320-1923-42FB-A2BA-B133E6F917CF}.Debug|x64.ActiveCfg = Debug|x64
+		{3D700320-1923-42FB-A2BA-B133E6F917CF}.Debug|x64.Build.0 = Debug|x64
+		{3D700320-1923-42FB-A2BA-B133E6F917CF}.Debug|x86.ActiveCfg = Debug|Win32
+		{3D700320-1923-42FB-A2BA-B133E6F917CF}.Debug|x86.Build.0 = Debug|Win32
+		{3D700320-1923-42FB-A2BA-B133E6F917CF}.Release|x64.ActiveCfg = Release|x64
+		{3D700320-1923-42FB-A2BA-B133E6F917CF}.Release|x64.Build.0 = Release|x64
+		{3D700320-1923-42FB-A2BA-B133E6F917CF}.Release|x86.ActiveCfg = Release|Win32
+		{3D700320-1923-42FB-A2BA-B133E6F917CF}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
