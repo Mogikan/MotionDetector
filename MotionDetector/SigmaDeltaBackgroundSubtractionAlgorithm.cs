@@ -1,4 +1,7 @@
-﻿using ManagedCuda;
+﻿using Emgu.CV;
+using Emgu.CV.Structure;
+using Emgu.CV.Util;
+using ManagedCuda;
 using ManagedCuda.VectorTypes;
 using System;
 using System.Diagnostics;
@@ -26,83 +29,39 @@ namespace MotionDetector
         private int[] _variance;
         private byte[] _delta;
         private byte[] _detectionLabel;
-        private int _bytesPerPixel;       
-
-        private Bitmap GetBitmapFromGrayBytes(byte[] imageBytes)
-        {
-            BitmapData bmpdata = null;
-            Bitmap image = null;
-            try
-            {
-                image = new Bitmap(_width, _height,PixelFormat.Format32bppArgb);
-                bmpdata = image.LockBits(
-                    new Rectangle(0, 0, _width, _height),
-                    ImageLockMode.ReadWrite,
-                    PixelFormat.Format32bppArgb
-                );                
-                var ptr = bmpdata.Scan0;
-                for (int i = 0; i < _height; i++)
-                {
-                    for (int j = 0; j < _width; j++)
-                    {
-                        Marshal.Copy(new byte[] { imageBytes[i * _width + j], imageBytes[i* _width + j], imageBytes[i* _width + j] , 255 }, 0, ptr, 4);
-                        ptr = ptr + 4;                        
-                    }
-                }
-                //image.Save(@"c:\temp\motion.jpeg", ImageFormat.Jpeg);
-                return image;
-            }
-            finally
-            {
-                if (bmpdata != null)
-                    image.UnlockBits(bmpdata);
-            }
-        }
+        private int _bytesPerPixel;
 
         
         public Bitmap MotionPicture
         {
             get
             {
-                Stopwatch watch = new Stopwatch();
-                watch.Start();
-                var result = GetBitmapFromGrayBytes(Erode(_detectionLabel));
-                watch.Stop();
-                System.Diagnostics.Debug.WriteLine($"erode time {watch.ElapsedMilliseconds}");
+                if (_imageBytes == null)
+                {
+                    return new Bitmap(1, 1);
+                }
+                var result = ImageUtils.GetImageFromBytes(
+                    ImageUtils.DrawMotionContours(                    
+                        ImageUtils.Erode(_detectionLabel,_width,_height)
+                        ,_imageBytes
+                        ,_width
+                        ,_height)
+                    ,_width
+                    ,_height);                
                 return result; 
             }
         }
 
-        private byte[] Erode(byte[] _detectionLabel)
-        {
-            ManagedCuda.NPP.NPPImage_8uC1 cudaImage = new ManagedCuda.NPP.NPPImage_8uC1(_width, _height);
-            ManagedCuda.NPP.NPPImage_8uC1 erodedImage = new ManagedCuda.NPP.NPPImage_8uC1(_width, _height);
-
-            cudaImage.CopyToDevice(_detectionLabel);
-            var erodeMask = new byte[]
-            {
-                1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1,
-            };
-            CudaDeviceVariable<byte> mask = erodeMask;
-            cudaImage.Erode(erodedImage,mask,new ManagedCuda.NPP.NppiSize(7,7),new ManagedCuda.NPP.NppiPoint(4,4));
-            mask.Dispose();
-            cudaImage.Dispose();
-            byte[] result = new byte[_detectionLabel.Length];
-            erodedImage.CopyToHost(result);
-            erodedImage.Dispose();            
-            return result;
-        }
+        
 
         private const int N = 4;
-        bool isFirstStep = true;
+        private bool isFirstStep = true;
+        private byte[] _imageBytes;
+        
         public void ExecuteStep(byte[] imagePixels,int stride)
         {
+        //    _stride = stride;
+            _imageBytes = imagePixels;
             if (isFirstStep)
             {
                 InitializeAlgorithm(imagePixels,stride);
@@ -143,28 +102,7 @@ namespace MotionDetector
             delta.Dispose();
             variance.Dispose();
             motionBytes.Dispose();
-            cudaContext.Dispose();
-            //for (int i = 0; i < _height; i++)
-            //{
-            //    for (int j = 0; j < _width; j++)
-            //    {
-            //        var imagePixel = (byte)(0.3 * imagePixels[i][j* _bytesPerPixel] + 0.59 * imagePixels[i][j * _bytesPerPixel + 1] + 0.11 * imagePixels[i][j * _bytesPerPixel + 2]);
-            //        _median[i][j] = (byte)(_median[i][j] + Math.Sign(imagePixel - _median[i][j]));//consult atricle
-            //        _delta[i][j] = (byte)(Math.Abs(imagePixel - _median[i][j]));
-            //        if (_delta[i][j] > 0.001)
-            //        {
-            //            _variance[i][j] = _variance[i][j] + Math.Sign(N * _delta[i][j] - _variance[i][j]);
-            //        }
-            //        if (_delta[i][j] > 0.001)
-            //        {
-            //            _detectionLabel[i][j] = (byte)(Convert.ToByte(_delta[i][j] >= _variance[i][j]) * 255);
-            //        }
-            //        else
-            //        {
-            //            _detectionLabel[i][j] = 0;
-            //        }
-            //    }
-            //}
+            cudaContext.Dispose();            
         }
 
         private void InitializeAlgorithm(byte[] imagePixels,int stride)

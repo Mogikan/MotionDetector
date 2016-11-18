@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using Emgu.CV;
+using Emgu.CV.Structure;
+using Emgu.CV.Util;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -15,11 +18,15 @@ namespace MotionDetector
     {
         public VideoCaptureViewModel(int width, int height,int bytesPerPixel)
         {
+            _width = width;
+            _height = height;
             RecognizeMotionCommand = new Command<object>(() => { RecognizeImage(); }, () => { return true; });
             _sigmaDeltaBackgroundSubtractionAllgorithm = new SigmaDeltaBackgroundSubtractionAlgorithm(width, height,bytesPerPixel);
         }
 
-        SigmaDeltaBackgroundSubtractionAlgorithm _sigmaDeltaBackgroundSubtractionAllgorithm;
+        private int _width,_height;
+
+        private SigmaDeltaBackgroundSubtractionAlgorithm _sigmaDeltaBackgroundSubtractionAllgorithm;
         public ICommand RecognizeMotionCommand { get; private set; }
 
         public Bitmap Source
@@ -35,19 +42,9 @@ namespace MotionDetector
             }
         }
 
-        public BitmapSource ConvertBitmapToSource(System.Drawing.Bitmap bitmap)
-        {
-            var bitmapData = bitmap.LockBits(
-                new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height),
-                System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
+        
 
-            var bitmapSource = BitmapSource.Create(
-                bitmapData.Width, bitmapData.Height, 96, 96, PixelFormats.Bgra32, null,
-                bitmapData.Scan0, bitmapData.Stride * bitmapData.Height, bitmapData.Stride);
-
-            bitmap.UnlockBits(bitmapData);
-            return bitmapSource;
-        }
+        
 
         public BitmapSource MotionPicture
         {
@@ -55,7 +52,7 @@ namespace MotionDetector
             {
                 lock (locker)
                 {
-                    return ConvertBitmapToSource(_sigmaDeltaBackgroundSubtractionAllgorithm.MotionPicture);
+                    return ImageUtils.ConvertBitmapToSource(_sigmaDeltaBackgroundSubtractionAllgorithm.MotionPicture);
                 }
             }
         }
@@ -97,37 +94,14 @@ namespace MotionDetector
                 watch.Start();
 
                 int stride;
-                byte[] imageBytes = GetImageBytes(Source,out stride);
+                byte[] imageBytes = ImageUtils.GetImageBytes(Source,out stride);
             
-                _sigmaDeltaBackgroundSubtractionAllgorithm.ExecuteStep(imageBytes, stride);
+                _sigmaDeltaBackgroundSubtractionAllgorithm.ExecuteStep(imageBytes, stride);                
                 NotifyPropertyChanged(()=> MotionPicture);
                 watch.Stop();
                 System.Diagnostics.Debug.WriteLine($"MotionDetection {watch.ElapsedMilliseconds}");
             }
-
         }
-        private byte[] GetImageBytes(Bitmap bitmap,out int stride)
-        {
-            int imageWidth = bitmap.Width;
-            int imageHeight = bitmap.Height;
-            BitmapData bmpdata = null;
-            lock (locker) {
-                try
-                {                    
-                    bmpdata = bitmap.LockBits(new Rectangle(0, 0, imageWidth, imageHeight), ImageLockMode.ReadOnly, bitmap.PixelFormat);
-                    stride = bmpdata.Stride;
-                    var totalImageBytes = bmpdata.Stride * bitmap.Height;
-                    byte[] buffer = new byte[totalImageBytes];
-                    var ptr = bmpdata.Scan0;
-                    Marshal.Copy(ptr, buffer, 0,totalImageBytes);                                        
-                    return buffer;
-                }
-                finally
-                {
-                    if (bmpdata != null)
-                        bitmap.UnlockBits(bmpdata);
-                }
-            }
-        }
+        
     }
 }
